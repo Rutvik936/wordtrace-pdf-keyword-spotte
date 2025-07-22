@@ -38,3 +38,13 @@ word-coordinate-app/
 ├── requirements.txt # Python dependencies
 └── output/ # JSON output folder (created at runtime)
 
+
+---
+
+## 📦 How to Run Locally
+
+```bash
+git clone https://github.com/Anuragpandey2005/word-coordinate-app.git
+cd word-coordinate-app
+pip install -r requirements.txt
+streamlit run app.py
