@@ -29,4 +29,12 @@ This project allows users to upload multi-page financial documents (PDFs), detec
 ---
 
 ## 🗂️ Project Structure
+word-coordinate-app/
+│
+├── app.py # Streamlit App
+├── textract_utils.py # OCR Processing
+├── viewer_utils.py # Image Highlights
+├── json_utils.py # Save/Load JSONs
+├── requirements.txt # Python dependencies
+└── output/ # JSON output folder (created at runtime)
 
