@@ -1,0 +1,6 @@
+streamlit
+boto3
+pdf2image
+pytesseract
+opencv-python
+Pillow
