@@ -5,20 +5,17 @@ import pytesseract
 import json
 import os
 
-# Save layout and word json
+# Save JSON files
 def save_json(data, path):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
-# Process PDF pages and extract word-level bounding boxes
+# Process PDF using pytesseract
 def process_pdf_with_tesseract(pages, max_pages):
     layout_json = {}
     word_json = {}
 
-    for i, page in enumerate(pages):
-        if i >= max_pages:
-            break
-
+    for i, page in enumerate(pages[:max_pages]):
         width, height = page.size
         layout_json[str(i)] = {
             "image_name": f"page-{i}.jpg",
@@ -28,7 +25,6 @@ def process_pdf_with_tesseract(pages, max_pages):
         }
 
         word_json[str(i)] = []
-
         ocr = pytesseract.image_to_data(page, output_type=pytesseract.Output.DICT)
         all_text = []
 
@@ -54,7 +50,7 @@ def process_pdf_with_tesseract(pages, max_pages):
 
     return layout_json, word_json
 
-# Highlight words in image
+# Draw highlights on words
 def render_with_highlights(pages, word_json, queries):
     for i, page in enumerate(pages):
         if str(i) not in word_json:
@@ -73,24 +69,24 @@ def render_with_highlights(pages, word_json, queries):
 # ------------------ STREAMLIT APP ------------------
 
 st.set_page_config(layout="wide")
-st.title("📄 Word-Level Coordinate Highlighter (Tesseract + Streamlit)")
+st.title("📄 Word-Level Coordinate Highlighter (Streamlit + Tesseract)")
 
-uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
+uploaded_file = st.file_uploader("📤 Upload a PDF", type=["pdf"])
 
 if uploaded_file:
-    max_pages = st.number_input("📥 Enter number of pages to process", min_value=1, value=5)
+    max_pages = st.number_input("📄 Number of pages to process", min_value=1, value=5)
 
     with st.spinner("⚙️ Processing... please wait..."):
         pages = convert_from_bytes(uploaded_file.read(), fmt="jpeg")
         layout_json, word_json = process_pdf_with_tesseract(pages, max_pages)
+        os.makedirs("output", exist_ok=True)
         save_json(layout_json, "output/layout.json")
         save_json(word_json, "output/wordjson.json")
 
     st.success("✅ Processing complete! JSON files saved.")
 
-    # Keyword search
-    queries = []
     st.markdown("### 🔍 Search up to 5 Keywords")
+    queries = []
     for i in range(5):
         word = st.text_input(f"Keyword {i+1}", key=f"query_{i}")
         if word:
