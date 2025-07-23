@@ -1,9 +1,4 @@
 streamlit
-<<<<<<< HEAD
-easyocr
-PyMuPDF
-=======
-PyMuPDF
-easyocr
->>>>>>> 4ed58c0c644588fbc119144a75b322f8951810a1
 Pillow
+PyMuPDF
+easyocr
