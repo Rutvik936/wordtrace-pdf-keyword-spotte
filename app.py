@@ -8,12 +8,17 @@ from json_utils import save_layout_json, save_word_json
 st.set_page_config(layout="wide")
 st.title("📄 Word-Level Coordinate Highlighter")
 
-# ✅ Convert PDF to images using PyMuPDF (NO poppler required)
-def convert_pdf_to_images(file):
+# ✅ Ask how many pages to process
+max_pages = st.number_input("How many PDF pages to process?", min_value=1, max_value=50, value=3)
+
+# ✅ Convert PDF to image pages
+def convert_pdf_to_images(file, max_pages):
     pdf_doc = fitz.open(stream=file.read(), filetype="pdf")
     pages = []
-    for page in pdf_doc:
-        pix = page.get_pixmap(dpi=150)
+    for i, page in enumerate(pdf_doc):
+        if i >= max_pages:
+            break
+        pix = page.get_pixmap(dpi=100)  # 🔽 Low DPI for speed
         img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
         pages.append(img)
     return pages
@@ -21,7 +26,7 @@ def convert_pdf_to_images(file):
 uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
 
 if uploaded_file:
-    pages = convert_pdf_to_images(uploaded_file)
+    pages = convert_pdf_to_images(uploaded_file, max_pages)
 
     with st.spinner("⚙️ Processing... please wait..."):
         layout_json, word_json = process_pdf_with_textract(pages)
