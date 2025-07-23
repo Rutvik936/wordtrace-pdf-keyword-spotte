@@ -12,7 +12,6 @@ def process_pdf_with_textract(pages):
         page_num = str(i)
         width, height = page.size
 
-        # Dummy layout regions
         title_box = [int(width * 0.1), int(height * 0.05), int(width * 0.9), int(height * 0.15)]
         table_box = [int(width * 0.1), int(height * 0.25), int(width * 0.9), int(height * 0.75)]
 
@@ -26,15 +25,14 @@ def process_pdf_with_textract(pages):
         word_json[page_num] = []
 
         for region_class, region_box in zip(["Title", "Table"], [title_box, table_box]):
-            cropped_region = page.crop(region_box)
-            cropped_np = np.array(cropped_region)
+            cropped = page.crop(region_box)
+            np_img = np.array(cropped)
 
-            results = reader.readtext(cropped_np)
-
+            results = reader.readtext(np_img)
             text_buffer = []
 
-            for (bbox, text, confidence) in results:
-                if confidence < 0.3:
+            for (bbox, text, conf) in results:
+                if conf < 0.3:
                     continue
 
                 x1, y1 = map(int, bbox[0])
@@ -47,13 +45,8 @@ def process_pdf_with_textract(pages):
 
                 text_buffer.append(text)
 
-            # Normalized layout box
-            norm = [
-                region_box[0] / width,
-                region_box[1] / height,
-                region_box[2] / width,
-                region_box[3] / height,
-            ]
+            norm = [region_box[0]/width, region_box[1]/height,
+                    region_box[2]/width, region_box[3]/height]
 
             layout_json[page_num]["sections"].append({
                 "bbox": norm,

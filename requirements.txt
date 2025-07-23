@@ -2,3 +2,4 @@ streamlit
 Pillow
 PyMuPDF
 easyocr
+numpy
