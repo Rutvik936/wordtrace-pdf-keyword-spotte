@@ -1,22 +1,36 @@
 import streamlit as st
-from pdf2image import convert_from_bytes
-from PIL import ImageDraw, Image
+import fitz  # PyMuPDF
 import pytesseract
+from PIL import Image, ImageDraw
+import numpy as np
 import json
 import os
 
-# Save JSON files
+# Output folder
+os.makedirs("output", exist_ok=True)
+
+st.set_page_config(layout="wide")
+st.title("📄 Word-Level Coordinate Highlighter (PyMuPDF + Pytesseract)")
+
+uploaded_file = st.file_uploader("📤 Upload a PDF", type=["pdf"])
+
 def save_json(data, path):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
-# Process PDF using pytesseract
-def process_pdf_with_tesseract(pages, max_pages):
+def process_pdf(pdf_data, max_pages):
+    doc = fitz.open(stream=pdf_data.read(), filetype="pdf")
     layout_json = {}
     word_json = {}
 
-    for i, page in enumerate(pages[:max_pages]):
-        width, height = page.size
+    for i, page in enumerate(doc):
+        if i >= max_pages:
+            break
+
+        pix = page.get_pixmap()
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        width, height = img.size
+
         layout_json[str(i)] = {
             "image_name": f"page-{i}.jpg",
             "width": width,
@@ -25,7 +39,7 @@ def process_pdf_with_tesseract(pages, max_pages):
         }
 
         word_json[str(i)] = []
-        ocr = pytesseract.image_to_data(page, output_type=pytesseract.Output.DICT)
+        ocr = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
         all_text = []
 
         for j in range(len(ocr["text"])):
@@ -48,15 +62,16 @@ def process_pdf_with_tesseract(pages, max_pages):
             "text": " ".join(all_text)
         })
 
-    return layout_json, word_json
+    return layout_json, word_json, doc
 
-# Draw highlights on words
 def render_with_highlights(pages, word_json, queries):
     for i, page in enumerate(pages):
         if str(i) not in word_json:
             continue
 
-        draw = ImageDraw.Draw(page)
+        pix = page.get_pixmap()
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        draw = ImageDraw.Draw(img)
 
         for word_obj in word_json[str(i)]:
             word_text = word_obj["text"].lower()
@@ -64,25 +79,17 @@ def render_with_highlights(pages, word_json, queries):
                 x1, y1, x2, y2 = word_obj["bbox"]
                 draw.rectangle([x1, y1, x2, y2], outline="red", width=2)
 
-        st.image(page, caption=f"Page {i+1}", use_container_width=True)
+        st.image(img, caption=f"Page {i+1}", use_container_width=True)
 
-# ------------------ STREAMLIT APP ------------------
-
-st.set_page_config(layout="wide")
-st.title("📄 Word-Level Coordinate Highlighter (Streamlit + Tesseract)")
-
-uploaded_file = st.file_uploader("📤 Upload a PDF", type=["pdf"])
+# ----------------- Streamlit App Flow --------------------
 
 if uploaded_file:
     max_pages = st.number_input("📄 Number of pages to process", min_value=1, value=5)
 
     with st.spinner("⚙️ Processing... please wait..."):
-        pages = convert_from_bytes(uploaded_file.read(), fmt="jpeg")
-        layout_json, word_json = process_pdf_with_tesseract(pages, max_pages)
-        os.makedirs("output", exist_ok=True)
+        layout_json, word_json, doc = process_pdf(uploaded_file, max_pages)
         save_json(layout_json, "output/layout.json")
         save_json(word_json, "output/wordjson.json")
-
     st.success("✅ Processing complete! JSON files saved.")
 
     st.markdown("### 🔍 Search up to 5 Keywords")
@@ -95,6 +102,9 @@ if uploaded_file:
     st.markdown("---")
     if queries:
         st.markdown("### 🔦 Highlighted Results")
-        render_with_highlights(pages, word_json, queries)
+        render_with_highlights(doc, word_json, queries)
     else:
-        st.image(pages[0], caption="Page 1", use_container_width=True)
+        # Show first page
+        pix = doc[0].get_pixmap()
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        st.image(img, caption="Page 1", use_container_width=True)
