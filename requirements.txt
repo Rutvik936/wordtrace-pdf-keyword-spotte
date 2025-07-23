@@ -1,5 +1,5 @@
 streamlit
 pillow
 PyMuPDF==1.22.3
-pytesseract
+easyocr
 numpy

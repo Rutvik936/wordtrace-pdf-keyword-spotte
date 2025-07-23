@@ -1,6 +1,6 @@
 import streamlit as st
 import fitz  # PyMuPDF
-import pytesseract
+import easyocr
 from PIL import Image, ImageDraw
 import numpy as np
 import json
@@ -10,7 +10,7 @@ import os
 os.makedirs("output", exist_ok=True)
 
 st.set_page_config(layout="wide")
-st.title("📄 Word-Level Coordinate Highlighter (PyMuPDF + Pytesseract)")
+st.title("📄 Word-Level Coordinate Highlighter (EasyOCR + PyMuPDF)")
 
 uploaded_file = st.file_uploader("📤 Upload a PDF", type=["pdf"])
 
@@ -20,6 +20,8 @@ def save_json(data, path):
 
 def process_pdf(pdf_data, max_pages):
     doc = fitz.open(stream=pdf_data.read(), filetype="pdf")
+    reader = easyocr.Reader(['en'], gpu=False)
+
     layout_json = {}
     word_json = {}
 
@@ -29,6 +31,9 @@ def process_pdf(pdf_data, max_pages):
 
         pix = page.get_pixmap()
         img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        np_img = np.array(img)
+
+        results = reader.readtext(np_img)
         width, height = img.size
 
         layout_json[str(i)] = {
@@ -39,27 +44,27 @@ def process_pdf(pdf_data, max_pages):
         }
 
         word_json[str(i)] = []
-        ocr = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
-        all_text = []
 
-        for j in range(len(ocr["text"])):
-            word = ocr["text"][j].strip()
-            if word:
-                x = ocr["left"][j]
-                y = ocr["top"][j]
-                w = ocr["width"][j]
-                h = ocr["height"][j]
-                word_json[str(i)].append({
-                    "text": word,
-                    "bbox": [x, y, x + w, y + h]
-                })
-                all_text.append(word)
+        for (bbox, text, conf) in results:
+            if text.strip() == "":
+                continue
 
+            x_min = int(min([pt[0] for pt in bbox]))
+            y_min = int(min([pt[1] for pt in bbox]))
+            x_max = int(max([pt[0] for pt in bbox]))
+            y_max = int(max([pt[1] for pt in bbox]))
+
+            word_json[str(i)].append({
+                "text": text,
+                "bbox": [x_min, y_min, x_max, y_max]
+            })
+
+        all_text = " ".join([w["text"] for w in word_json[str(i)]])
         layout_json[str(i)]["sections"].append({
             "bbox": [0, 0, 1, 1],
             "class": "FullPage",
             "score": 1.0,
-            "text": " ".join(all_text)
+            "text": all_text
         })
 
     return layout_json, word_json, doc
@@ -104,7 +109,6 @@ if uploaded_file:
         st.markdown("### 🔦 Highlighted Results")
         render_with_highlights(doc, word_json, queries)
     else:
-        # Show first page
         pix = doc[0].get_pixmap()
         img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
         st.image(img, caption="Page 1", use_container_width=True)
