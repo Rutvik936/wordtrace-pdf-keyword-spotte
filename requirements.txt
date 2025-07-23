@@ -1,5 +1,6 @@
 streamlit
 pillow
-PyMuPDF==1.22.3
-easyocr==1.6.1
+PyMuPDF==1.21.1
+pytesseract
+pdf2image
 numpy
