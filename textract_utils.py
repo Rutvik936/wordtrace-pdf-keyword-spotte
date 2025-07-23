@@ -1,6 +1,5 @@
-import numpy as np
-from PIL import Image
 import easyocr
+import numpy as np
 
 reader = easyocr.Reader(['en'])
 
@@ -26,30 +25,29 @@ def process_pdf_with_textract(pages):
 
         for region_class, region_box in zip(["Title", "Table"], [title_box, table_box]):
             cropped = page.crop(region_box)
-            np_img = np.array(cropped)
+            cropped_np = np.array(cropped)
+            results = reader.readtext(cropped_np)
 
-            results = reader.readtext(np_img)
             text_buffer = []
 
             for (bbox, text, conf) in results:
-                if conf < 0.3:
-                    continue
-
-                x1, y1 = map(int, bbox[0])
-                x2, y2 = map(int, bbox[2])
+                (x1, y1) = (int(bbox[0][0] + region_box[0]), int(bbox[0][1] + region_box[1]))
+                (x2, y2) = (int(bbox[2][0] + region_box[0]), int(bbox[2][1] + region_box[1]))
 
                 word_json[page_num].append({
                     "text": text,
-                    "bbox": [x1 + region_box[0], y1 + region_box[1], x2 + region_box[0], y2 + region_box[1]]
+                    "bbox": [x1, y1, x2, y2]
                 })
 
                 text_buffer.append(text)
 
-            norm = [region_box[0]/width, region_box[1]/height,
-                    region_box[2]/width, region_box[3]/height]
-
             layout_json[page_num]["sections"].append({
-                "bbox": norm,
+                "bbox": [
+                    region_box[0]/width,
+                    region_box[1]/height,
+                    region_box[2]/width,
+                    region_box[3]/height
+                ],
                 "class": region_class,
                 "score": 0.85,
                 "text": " ".join(text_buffer)
