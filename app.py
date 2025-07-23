@@ -1,21 +1,31 @@
-# ✅ 1. app.py
 import streamlit as st
-from pdf2image import convert_from_bytes
+import pytesseract
+import fitz  # PyMuPDF
+from PIL import Image, ImageDraw
 from textract_utils import process_pdf_with_textract
 from viewer_utils import render_pdf_with_highlights
 from json_utils import save_layout_json, save_word_json
-import os
 
-# ✅ Update with your actual Poppler path
-POPPLER_PATH = r"C:\\Users\\rutvi\\Downloads\\Release-24.08.0-0\\poppler-24.08.0\\Library\\bin"
-
+# Set Streamlit page config
 st.set_page_config(layout="wide")
 st.title("📄 Word-Level Coordinate Highlighter")
 
+# Function to convert PDF to images using PyMuPDF (NO POPPLER REQUIRED)
+def convert_pdf_to_images(file):
+    pdf_doc = fitz.open(stream=file.read(), filetype="pdf")
+    pages = []
+    for page in pdf_doc:
+        pix = page.get_pixmap(dpi=150)
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        pages.append(img)
+    return pages
+
+# File uploader
 uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
 
+# Processing logic
 if uploaded_file:
-    pages = convert_from_bytes(uploaded_file.read(), poppler_path=POPPLER_PATH)
+    pages = convert_pdf_to_images(uploaded_file)
 
     with st.spinner("⚙️ Processing... please wait..."):
         layout_json, word_json = process_pdf_with_textract(pages)
@@ -36,4 +46,4 @@ if uploaded_file:
         st.markdown("### 🔦 Highlighted Results")
         render_pdf_with_highlights(pages, word_json, queries)
     else:
-        st.image(pages[0], caption="Page 1", use_column_width=True)
+        st.image(pages[0], caption="Page 1", use_container_width=True)
