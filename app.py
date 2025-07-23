@@ -1,14 +1,27 @@
 import streamlit as st
+<<<<<<< HEAD
+=======
+import pytesseract
+import fitz  # PyMuPDF
+>>>>>>> 4ed58c0c644588fbc119144a75b322f8951810a1
 from PIL import Image, ImageDraw
 from textract_utils import process_pdf_with_textract
 from viewer_utils import render_pdf_with_highlights
 from json_utils import save_layout_json, save_word_json
+<<<<<<< HEAD
 import fitz  # PyMuPDF
+=======
+>>>>>>> 4ed58c0c644588fbc119144a75b322f8951810a1
 
+# Set Streamlit page config
 st.set_page_config(layout="wide")
 st.title("📄 Word-Level Coordinate Highlighter")
 
+<<<<<<< HEAD
 # PDF to images using PyMuPDF (no poppler needed)
+=======
+# Function to convert PDF to images using PyMuPDF (NO POPPLER REQUIRED)
+>>>>>>> 4ed58c0c644588fbc119144a75b322f8951810a1
 def convert_pdf_to_images(file):
     pdf_doc = fitz.open(stream=file.read(), filetype="pdf")
     pages = []
@@ -18,8 +31,13 @@ def convert_pdf_to_images(file):
         pages.append(img)
     return pages
 
+<<<<<<< HEAD
+=======
+# File uploader
+>>>>>>> 4ed58c0c644588fbc119144a75b322f8951810a1
 uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
 
+# Processing logic
 if uploaded_file:
     pages = convert_pdf_to_images(uploaded_file)
 
